@@ -3662,6 +3662,19 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+    # Render keep-alive (dummy server)
+from aiohttp import web
+async def _health(request):
+    return web.Response(text="OK")
+async def _start_health():
+    app = web.Application()
+    app.router.add_get("/", _health)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT", 8080)))
+    await site.start()
+# main() ke andar:
+# asyncio.create_task(_start_health())
 
 #🗿 Bot Developer - @SHURU_33
 #🔰 Developer Channel - @Modsnew
