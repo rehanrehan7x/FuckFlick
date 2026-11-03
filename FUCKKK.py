@@ -3657,6 +3657,16 @@ async def main():
         )
     except Exception as e:
         log.warning(f"Owner notify: {e}")
+        async def start_health_server():
+    from aiohttp import web
+    port = int(os.environ.get("PORT", 10000))
+    app = web.Application()
+    app.router.add_get("/", lambda r: web.Response(text="OK"))
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    log.info(f"Health server on 0.0.0.0:{port}")
 
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 
