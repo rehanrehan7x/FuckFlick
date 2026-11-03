@@ -3630,45 +3630,42 @@ async def noop(cq: CallbackQuery):
     await cq.answer()
 
 async def main():
+    from aiohttp import web
+    
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher(storage=MemoryStorage())
     dp.include_router(R)
     me = await bot.get_me()
     log.info(f"@{me.username} — SMS Blast Bot {_VERSION} started!")
 
-    scanner_task = asyncio.create_task(background_firebase_scanner(bot))
-    log.info("Background scanner task created")
+    # Health check server (Render ke liye — port bind karna zaroori hai)
+    async def start_health_server():
+        port = int(os.environ.get("PORT", 10000))
+        app = web.Application()
+        app.router.add_get("/", lambda r: web.Response(text="OK"))
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "0.0.0.0", port)
+        await site.start()
+        log.info(f"Health server listening on 0.0.0.0:{port}")
+    
+    asyncio.create_task(start_health_server())
 
+    # Owner ko notify karo (optional)
     try:
         await bot.send_message(
             MAIN_OWNER,
-            f"{em(EMOJI_ROCKET, '🚀')} <b>SMS Blast Bot {_VERSION} Online!</b>\n@{me.username}\n"
-            f"<code>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</code>\n\n"
-            f"{em(EMOJI_GEAR, '🔄')} <b>Background Scanner:</b> Starting...\n"
-            f"{em(EMOJI_WARNING, '⏱')} Auto-Scan Interval: <b>1 minute</b>\n"
-            f"{em(EMOJI_STAR, '👥')} <b>Per-User Sessions:</b> ENABLED\n"
-            f"{em(EMOJI_ROCKET, '🚀')} <b>Concurrent Users:</b> 1000+\n"
-            f"{em(EMOJI_LOCK, '🔒')} <b>Number Protection:</b> ENABLED\n"
-            f"{em(EMOJI_VIDEO, '📹')} <b>Video Section & Auto-Send:</b> ENABLED\n"
-            f"{em(EMOJI_MONEY, '💸')} <b>Credit Transfer:</b> ENABLED\n"
-            f"{em(EMOJI_MONEY, '💰')} <b>Deduct Credits All:</b> ENABLED (No Notifications)\n"
-            f"👤 <b>Bot Owner:</b> {SUPER_ADMIN_NAME}",
+            f"{em(EMOJI_ROCKET, '🚀')} <b>SMS Blast Bot {_VERSION} Online!</b>\n"
+            f"@{me.username}\n\n"
+            f"{em(EMOJI_GEAR, '🔄')} TextBee mode active\n"
+            f"👤 <b>Owner:</b> {SUPER_ADMIN_NAME}",
             parse_mode="HTML"
         )
     except Exception as e:
         log.warning(f"Owner notify: {e}")
-        async def start_health_server():
-    from aiohttp import web
-    port = int(os.environ.get("PORT", 10000))
-    app = web.Application()
-    app.router.add_get("/", lambda r: web.Response(text="OK"))
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", port)
-    await site.start()
-    log.info(f"Health server on 0.0.0.0:{port}")
 
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+
 
 if __name__ == "__main__":
     asyncio.run(main())
